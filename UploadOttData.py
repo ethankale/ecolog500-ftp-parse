@@ -35,6 +35,10 @@ numVals     = 0
 config = ConfigParser.ConfigParser()
 config.read('C:/Users/nkale/Desktop/GIT/settings.ini')
 
+#Set paths
+downloadDir = config.get('filepaths','download_path')
+archiveDir = config.get('filepaths','archive_path')
+
 # Connect to FTP
 ftp_dir     = config.get('ftp','directory')
 ftp_usr     = config.get('ftp','username')
