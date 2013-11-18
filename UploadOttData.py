@@ -13,12 +13,9 @@ from datetime import datetime
 
 #Some basic variables
 
-#Directories - switch to the commented out versions to use from a desktop, as opposed to the server
+#Directory for config file
+# Switch to the commented out versions to use from a desktop, as opposed to the server (here and in settings.ini)
 
-downloadDir = "Z:/Class 509/655 - Monitoring & Data/Equipment/OTT Water Logger ecoLog500/downloadData/"
-#downloadDir = "D:/Office Files/Class 509/655 - Monitoring & Data/Equipment/OTT Water Logger ecoLog500/downloadData/"
-archiveDir  = "Z:/Class 509/655 - Monitoring & Data/Equipment/OTT Water Logger ecoLog500/downloadData/dataArchive.zip"
-#archiveDir = "D:/Office Files/Class 509/655 - Monitoring & Data/Equipment/OTT Water Logger ecoLog500/downloadData/dataArchive.zip"
 configPath  = "Z:/Class 509/655 - Monitoring & Data/Equipment/Ott Water Logger ecoLog500/settings.ini"
 #configPath  = "D:/Office Files/Class 509/655 - Monitoring & Data/Equipment/Ott Water Logger ecoLog500/settings.ini"
 
