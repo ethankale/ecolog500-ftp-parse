@@ -13,11 +13,8 @@ from datetime import datetime
 
 #Some basic variables
 
-#Directory for config file
-# Switch to the commented out versions to use from a desktop, as opposed to the server (here and in settings.ini)
-
-configPath  = "Z:/Class 509/655 - Monitoring & Data/Equipment/Ott Water Logger ecoLog500/settings.ini"
-#configPath  = "D:/Office Files/Class 509/655 - Monitoring & Data/Equipment/Ott Water Logger ecoLog500/settings.ini"
+# Config file needs to be in the same directory as the script; otherwise, alter configPath to match the location.
+configPath = "ott_settings.ini"
 
 siteid      = "PL_OUT"
 mtypeid     = "ELEV"
@@ -30,14 +27,14 @@ numFiles    = 0
 numVals     = 0
 
 config = ConfigParser.ConfigParser()
-config.read('C:/Users/nkale/Desktop/GIT/settings.ini')
+config.read(configPath)
 
 #Set paths
 downloadDir = config.get('filepaths','download_path')
 archiveDir = config.get('filepaths','archive_path')
 
 # Connect to FTP
-ftp_dir     = config.get('ftp','directory')
+ftp_dir     = config.get('ftp','url')
 ftp_usr     = config.get('ftp','username')
 ftp_pwd     = config.get('ftp','password')
 target_dir  = config.get('ftp','target_dir')
