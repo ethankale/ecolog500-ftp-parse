@@ -30,31 +30,32 @@ config = ConfigParser.ConfigParser()
 config.read(configPath)
 
 #Set paths
-downloadDir = config.get('filepaths','download_path')
-archiveDir = config.get('filepaths','archive_path')
+downloadDir = config.get('filepaths','download_paths')
+archiveDir = config.get('filepaths','archive_paths')
 
 # Connect to FTP
 ftp_dir     = config.get('ftp','url')
 ftp_usr     = config.get('ftp','username')
 ftp_pwd     = config.get('ftp','password')
-target_dir  = config.get('ftp','target_dir')
+target_dirs = config.get('ftp','target_dirs').split(",")
 
 
 ftp = FTP(ftp_dir)
 ftp.login(ftp_usr, ftp_pwd)
-
-ftp.cwd(target_dir)
-files = ftp.nlst(target_dir)
 
 #Connect to MySQL
 mysql_url   = config.get('mysql','url')
 mysql_usr   = config.get('mysql','username')
 mysql_pwd   = config.get('mysql','password')
 mysql_db    = config.get('mysql','database')
+mysql_ids   = config.get('mysql','siteids').split(",")
 
 con = None
 con = mdb.connect(mysql_url, mysql_usr, mysql_pwd, mysql_db);
 cur = con.cursor()
+
+ftp.cwd(target_dir)
+files = ftp.nlst(target_dir)
 
 #Grab the date/time of the most recent measurement recorded.
 cur.execute("SELECT `mtime` FROM `measurements` WHERE `siteid` = 'PL_OUT' ORDER BY `mtime` DESC LIMIT 1 ")
@@ -63,6 +64,8 @@ if cur.rowcount > 0:
 else:
     lastMeasureDate = datetime.strptime("19900101010000","%Y%m%d%H%M%S")
 print "Most recent data uploaded on: {0}".format(lastMeasureDate)
+
+i = 0
 
 #Open archive
 archive = zipfile.ZipFile(archiveDir, "a")
