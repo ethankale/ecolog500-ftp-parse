@@ -7,7 +7,7 @@
 # Made by: Nat Kale, PLSLWD Planner, 2012-06-20
 # Updated with new benchmark: 2012-07-31
 
-import os, sys, zipfile, ConfigParser, xml.etree.ElementTree as xmlParser, MySQLdb as mdb
+import os, sys, zipfile, logging, ConfigParser, xml.etree.ElementTree as xmlParser, MySQLdb as mdb
 from ftplib import FTP
 from datetime import datetime
 
@@ -25,6 +25,9 @@ sensor      = ""
 vals        = []
 numFiles    = 0
 numVals     = 0
+
+# Logging format
+logging.basicConfig(filename='UploadOttData.log',level=logging.DEBUG,format='%(asctime)s %(message)s')
 
 config = ConfigParser.ConfigParser()
 config.read(configPath)
@@ -63,7 +66,7 @@ if cur.rowcount > 0:
     lastMeasureDate = cur.fetchone()[0]
 else:
     lastMeasureDate = datetime.strptime("19900101010000","%Y%m%d%H%M%S")
-print "Most recent data uploaded on: {0}".format(lastMeasureDate)
+logging.info("Most recent data uploaded on: {0}".format(lastMeasureDate))
 
 i = 0
 
@@ -75,7 +78,7 @@ for file in files:
     numFiles = numFiles + 1
     if file[0] != ".":
         fileName = file.split(target_dir)[1]
-        print(fileName)
+        logging.info(fileName)
         filedatetime = datetime.strptime(fileName[11:25],"%Y%m%d%H%M%S")
         
         #Read out data in files not yet entered in the DB
@@ -102,12 +105,11 @@ for file in files:
                         thedtime    = datetime.strptime(dtime, "%Y%m%d%H%M%S")
                         timeFormat  = thedtime.strftime("%Y-%m-%d %H:%M:%S")
                         sql         = insertSQL.format(timeFormat, val, siteid, mtypeid)
-                        #print(sql)
                         cur.execute(sql)
                         con.commit()
                         numVals     = numVals + 1
             else:
-                print(file + " has no data.")
+                logging.info(file + " has no data.")
             
             #Archive the file, remove unnecessary copies.
             currfile.close()
@@ -115,7 +117,7 @@ for file in files:
             os.remove(downloadDir + fileName)
             ftp.delete(file)
 
-print("Read {0} files from FTP; added {1} values to the database.".format(numFiles, numVals))
+logging.info("Read {0} files from FTP; added {1} values to the database.\n---\n".format(numFiles, numVals))
 
 # Close connections
 ftp.quit()
