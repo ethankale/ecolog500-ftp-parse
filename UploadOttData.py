@@ -16,15 +16,12 @@ from datetime import datetime
 # Config file needs to be in the same directory as the script; otherwise, alter configPath to match the location.
 configPath = "ott_settings.ini"
 
-siteid      = "PL_OUT"
 mtypeid     = "ELEV"
-benchmark   = 910.13
 zeroElev    = 900
 insertSQL   = " INSERT INTO `measurements` (`mtime`, `value`, `siteid`, `mtypeid`, `lab_id`) VALUES ('{0}', {1}, '{2}', '{3}', 'N/A') "
 sensor      = ""
 vals        = []
-numFiles    = 0
-numVals     = 0
+
 
 # Logging format
 logging.basicConfig(filename='UploadOttData.log',level=logging.DEBUG,format='%(asctime)s %(message)s')
@@ -53,72 +50,90 @@ mysql_pwd   = config.get('mysql','password')
 mysql_db    = config.get('mysql','database')
 mysql_ids   = config.get('mysql','siteids').split(",")
 
-con = None
-con = mdb.connect(mysql_url, mysql_usr, mysql_pwd, mysql_db);
-cur = con.cursor()
-
-ftp.cwd(target_dir)
-files = ftp.nlst(target_dir)
-
-#Grab the date/time of the most recent measurement recorded.
-cur.execute("SELECT `mtime` FROM `measurements` WHERE `siteid` = 'PL_OUT' ORDER BY `mtime` DESC LIMIT 1 ")
-if cur.rowcount > 0:
-    lastMeasureDate = cur.fetchone()[0]
-else:
-    lastMeasureDate = datetime.strptime("19900101010000","%Y%m%d%H%M%S")
-logging.info("Most recent data uploaded on: {0}".format(lastMeasureDate))
-
-i = 0
-
 #Open archive
 archive = zipfile.ZipFile(archiveDir, "a")
 
-# Grab data from files, & import to WQDB
-for file in files:
-    numFiles = numFiles + 1
-    if file[0] != ".":
-        fileName = file.split(target_dir)[1]
-        logging.info(fileName)
-        filedatetime = datetime.strptime(fileName[11:25],"%Y%m%d%H%M%S")
-        
-        #Read out data in files not yet entered in the DB
-        if filedatetime > lastMeasureDate :
-            ftp.retrbinary("RETR " + file, open(downloadDir + fileName, 'wb').write)
-            currfile    = open(downloadDir + fileName, 'r')
-            contents    = currfile.read().strip()
-            lines       = contents.split("\n")
-            
-            
-            #Parse data, pulling just the elevation data & inserting into DB
-            if len(lines) > 1:
-                for line in lines:
-                    if line[0] == "<":
-                        fixedLine   = "<ln>" + line + "</ln>"
-                        values      = xmlParser.fromstring(fixedLine)
-                        sensor      = values.find("SENSOR").text
-                    elif sensor == "0001":
-                        vals.append(line.strip().split(":"))
-                        theDate     = line.strip().split(";")[0]
-                        theTime     = line.strip().split(";")[1]
-                        val         = zeroElev + float(line.strip().split(";")[2])
-                        dtime       = str(theDate) + str(theTime)
-                        thedtime    = datetime.strptime(dtime, "%Y%m%d%H%M%S")
-                        timeFormat  = thedtime.strftime("%Y-%m-%d %H:%M:%S")
-                        sql         = insertSQL.format(timeFormat, val, siteid, mtypeid)
-                        cur.execute(sql)
-                        con.commit()
-                        numVals     = numVals + 1
-            else:
-                logging.info(file + " has no data.")
-            
-            #Archive the file, remove unnecessary copies.
-            currfile.close()
-            archive.write(downloadDir + fileName, fileName, zipfile.ZIP_DEFLATED)
-            os.remove(downloadDir + fileName)
-            ftp.delete(file)
+i = 0
 
-logging.info("Read {0} files from FTP; added {1} values to the database.\n---\n".format(numFiles, numVals))
+#Loop through each site
+for id in mysql_ids:
+
+    numFiles    = 0
+    numVals     = 0
+
+    logging.info("Looking for data at site {}.".format(id))
+    
+    con = None
+    con = mdb.connect(mysql_url, mysql_usr, mysql_pwd, mysql_db);
+    cur = con.cursor()
+
+    ftp.cwd(target_dirs[i])
+    files = ftp.nlst(target_dirs[i])
+
+    #Grab the date/time of the most recent measurement recorded.
+    cur.execute("SELECT `mtime` FROM `measurements` WHERE `siteid` = '{}' ORDER BY `mtime` DESC LIMIT 1 ".format(id))
+    if cur.rowcount > 0:
+        lastMeasureDate = cur.fetchone()[0]
+    else:
+        lastMeasureDate = datetime.strptime("19900101010000","%Y%m%d%H%M%S")
+    logging.info("Most recent data uploaded on: {0}".format(lastMeasureDate))
+
+
+
+    # Grab data from files, & import to WQDB
+    for file in files:
+        numFiles = numFiles + 1
+        if file[0] != ".":
+            
+            fileName = file.split(target_dirs[i])[1]
+            logging.info(fileName)
+            
+            #Ott log filenames follow a specific format; (padded) site name first, followed by date & time
+            filedatetime = datetime.strptime(fileName[11:25],"%Y%m%d%H%M%S")
+            
+            #Read out data in files not yet entered in the DB
+            if filedatetime > lastMeasureDate :
+                ftp.retrbinary("RETR " + file, open(downloadDir + fileName, 'wb').write)
+                currfile    = open(downloadDir + fileName, 'r')
+                contents    = currfile.read().strip()
+                lines       = contents.split("\n")
+                
+                #Parse data, pulling just the elevation data & inserting into DB
+                if len(lines) > 1:
+                    for line in lines:
+                        if line[0] == "<":
+                            fixedLine   = "<ln>" + line + "</ln>"
+                            values      = xmlParser.fromstring(fixedLine)
+                            sensor      = values.find("SENSOR").text
+                        elif sensor == "0001":
+                            vals.append(line.strip().split(":"))
+                            theDate     = line.strip().split(";")[0]
+                            theTime     = line.strip().split(";")[1]
+                            val         = zeroElev + float(line.strip().split(";")[2])
+                            dtime       = str(theDate) + str(theTime)
+                            thedtime    = datetime.strptime(dtime, "%Y%m%d%H%M%S")
+                            timeFormat  = thedtime.strftime("%Y-%m-%d %H:%M:%S")
+                            sql         = insertSQL.format(timeFormat, val, id, mtypeid)
+                            cur.execute(sql)
+                            con.commit()
+                            logging.info(sql)
+                            numVals     = numVals + 1
+                else:
+                    logging.info(file + " has no data.")
+                
+                #Archive the file, remove unnecessary copies.
+                currfile.close()
+                archive.write(downloadDir + fileName, fileName, zipfile.ZIP_DEFLATED)
+                os.remove(downloadDir + fileName)
+                ftp.delete(file)
+
+    logging.info("Read {0} files from FTP; added {1} values to the database.\n\n".format(numFiles, numVals))
+    
+    con.close()
+    i+=1
+
+logging.info("\n---\n")
 
 # Close connections
 ftp.quit()
-con.close()
+
